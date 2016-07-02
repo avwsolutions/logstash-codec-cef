@@ -2,33 +2,34 @@
 require "logstash/codecs/base"
 require "json"
 
-# Implementation of a Logstash codec for the ArcSight Common Event Format (CEF)
-# Based on Revision 20 of Implementing ArcSight CEF, dated from June 05, 2013
-# https://protect724.hp.com/servlet/JiveServlet/downloadBody/1072-102-6-4697/CommonEventFormat.pdf
-class LogStash::Codecs::CEF < LogStash::Codecs::Base
-  config_name "cef"
+# Implementation of a Logstash codec for the qRADAR Log Event Extended Format (LEEF)
+# Based on Version 1.0 of Implementing QRadar LEEF.
+# https://www.ibm.com/developerworks/community/wikis/form/anonymous/api/wiki/9989d3d7-02c1-444e-92be-576b33d2f2be/page/3dc63f46-4a33-4e0b-98bf-4e55b74e556b/attachment/a19b9122-5940-4c89-ba3e-4b4fc25e2328/media/QRadar_LEEF_Format_Guide.pdf
+ 
+class LogStash::Codecs::LEEF < LogStash::Codecs::Base
+  config_name "leef"
 
-  # Device vendor field in CEF header. The new value can include `%{foo}` strings
+  # Device vendor field in LEEF header. The new value can include `%{foo}` strings
   # to help you build a new value from other parts of the event.
   config :vendor, :validate => :string, :default => "Elasticsearch"
 
-  # Device product field in CEF header. The new value can include `%{foo}` strings
+  # Device product field in LEEF header. The new value can include `%{foo}` strings
   # to help you build a new value from other parts of the event.
   config :product, :validate => :string, :default => "Logstash"
 
-  # Device version field in CEF header. The new value can include `%{foo}` strings
+  # Device version field in LEEF header. The new value can include `%{foo}` strings
   # to help you build a new value from other parts of the event.
   config :version, :validate => :string, :default => "1.0"
 
-  # Signature ID field in CEF header. The new value can include `%{foo}` strings
+  # Signature ID field in LEEF header. The new value can include `%{foo}` strings
   # to help you build a new value from other parts of the event.
   config :signature, :validate => :string, :default => "Logstash"
 
-  # Name field in CEF header. The new value can include `%{foo}` strings
+  # Name field in LEEF header. The new value can include `%{foo}` strings
   # to help you build a new value from other parts of the event.
   config :name, :validate => :string, :default => "Logstash"
 
-  # Deprecated severity field for CEF header. The new value can include `%{foo}` strings
+  # Deprecated severity field for LEEF header. The new value can include `%{foo}` strings
   # to help you build a new value from other parts of the event.
   #
   # This field is used only if :severity is unchanged set to the default value.
@@ -38,7 +39,7 @@ class LogStash::Codecs::CEF < LogStash::Codecs::Base
   # All invalid values will be mapped to the default of 6.
   config :sev, :validate => :string, :default => "6", :deprecated => "This setting is being deprecated, use :severity instead."
 
-  # Severity field in CEF header. The new value can include `%{foo}` strings
+  # Severity field in LEEF header. The new value can include `%{foo}` strings
   # to help you build a new value from other parts of the event.
   #
   # Defined as field of type string to allow sprintf. The value will be validated
@@ -67,25 +68,25 @@ class LogStash::Codecs::CEF < LogStash::Codecs::Base
     # gives an "SyntaxError: (RegexpError) invalid pattern in look-behind" for the variable length look behind.
     # Therefore one edge case is not handled properly: \\| (this should split, but it does not, because the escaped \ is not recognized)
     # TODO: To solve all unescaping cases, regex is not suitable. A little parse should be written.
-    event['cef_version'], event['cef_vendor'], event['cef_product'], event['cef_device_version'], event['cef_sigid'], event['cef_name'], event['cef_severity'], *message = data.split /(?<=[^\\]\\\\)[\|]|(?<!\\)[\|]/
+    event['leef_version'], event['leef_vendor'], event['leef_product'], event['leef_device_version'], event['leef_sigid'], event['leef_name'], event['leef_severity'], *message = data.split /(?<=[^\\]\\\\)[\|]|(?<!\\)[\|]/
     message = message.join('|')
 
     # Unescape pipes and backslash in header fields
-    event['cef_version'] = event['cef_version'].gsub(/\\\|/, '|').gsub(/\\\\/, '\\')
-    event['cef_vendor'] = event['cef_vendor'].gsub(/\\\|/, '|').gsub(/\\\\/, '\\')
-    event['cef_product'] = event['cef_product'].gsub(/\\\|/, '|').gsub(/\\\\/, '\\')
-    event['cef_device_version'] = event['cef_device_version'].gsub(/\\\|/, '|').gsub(/\\\\/, '\\')
-    event['cef_sigid'] = event['cef_sigid'].gsub(/\\\|/, '|').gsub(/\\\\/, '\\')
-    event['cef_name'] = event['cef_name'].gsub(/\\\|/, '|').gsub(/\\\\/, '\\')
-    event['cef_severity'] = event['cef_severity'].gsub(/\\\|/, '|').gsub(/\\\\/, '\\') unless event['cef_severity'].nil?
+    event['leef_version'] = event['leef_version'].gsub(/\\\|/, '|').gsub(/\\\\/, '\\')
+    event['leef_vendor'] = event['leef_vendor'].gsub(/\\\|/, '|').gsub(/\\\\/, '\\')
+    event['leef_product'] = event['leef_product'].gsub(/\\\|/, '|').gsub(/\\\\/, '\\')
+    event['leef_device_version'] = event['leef_device_version'].gsub(/\\\|/, '|').gsub(/\\\\/, '\\')
+    event['leef_sigid'] = event['leef_sigid'].gsub(/\\\|/, '|').gsub(/\\\\/, '\\')
+    event['leef_name'] = event['leef_name'].gsub(/\\\|/, '|').gsub(/\\\\/, '\\')
+    event['leef_severity'] = event['leef_severity'].gsub(/\\\|/, '|').gsub(/\\\\/, '\\') unless event['leef_severity'].nil?
 
     # Try and parse out the syslog header if there is one
-    if event['cef_version'].include? ' '
-      event['syslog'], unused, event['cef_version'] = event['cef_version'].rpartition(' ')
+    if event['leef_version'].include? ' '
+      event['syslog'], unused, event['leef_version'] = event['leef_version'].rpartition(' ')
     end
 
-    # Get rid of the CEF bit in the version
-    event['cef_version'] = event['cef_version'].sub /^CEF:/, ''
+    # Get rid of the LEEF bit in the version
+    event['leef_version'] = event['leef_version'].sub /^LEEF:/, ''
 
     # Strip any whitespace from the message
     if not message.nil? and message.include? '='
@@ -105,7 +106,7 @@ class LogStash::Codecs::CEF < LogStash::Codecs::Base
       Hash[*message].each{ |k, v| extensions[k] = v }
 
       # And save the new has as the extensions
-      event['cef_ext'] = extensions
+      event['leef_ext'] = extensions
     end
 
     yield event
@@ -113,7 +114,7 @@ class LogStash::Codecs::CEF < LogStash::Codecs::Base
 
   public
   def encode(event)
-    # "CEF:0|Elasticsearch|Logstash|1.0|Signature|Name|Sev|"
+    # "LEEF:0|Elasticsearch|Logstash|1.0|Signature|Name|Sev|"
 
     vendor = sanitize_header_field(event.sprintf(@vendor))
     vendor = self.class.get_config["vendor"][:default] if vendor == ""
@@ -138,7 +139,7 @@ class LogStash::Codecs::CEF < LogStash::Codecs::Base
     end
 
     # Should also probably set the fields sent
-    header = ["CEF:0", vendor, product, version, signature, name, severity].join("|")
+    header = ["LEEF:0", vendor, product, version, signature, name, severity].join("|")
     values = @fields.map {|fieldname| get_value(fieldname, event)}.compact.join(" ")
 
     @on_event.call(event, "#{header}|#{values}\n")
@@ -175,7 +176,7 @@ class LogStash::Codecs::CEF < LogStash::Codecs::Base
   end
 
   # Escape equal signs in the extensions. Canonicalize newlines.
-  # CEF spec leaves it up to us to choose \r or \n for newline.
+  # LEEF spec leaves it up to us to choose \r or \n for newline.
   # We choose \n as the default.
   def sanitize_extension_val(value)
     output = ""

@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
 
-  s.name            = 'logstash-codec-cef'
+  s.name            = 'logstash-codec-leef'
   s.version         = '2.1.3'
   s.licenses        = ['Apache License (2.0)']
   s.summary         = "CEF codec to parse and encode CEF formated logs"

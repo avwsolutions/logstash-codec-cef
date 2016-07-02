@@ -1,3 +1,5 @@
+# 1.0.0 (fork from CEF 2.1.3)
+  - Slightly changed the format that the codec is available for the IBM Qradar Log Event Extended Format (LEEF)
 # 2.1.3
   - Switch in-place sub! to sub when extracting `cef_version`. new Logstash Java Event does not support in-place String changes.
 # 2.1.2
