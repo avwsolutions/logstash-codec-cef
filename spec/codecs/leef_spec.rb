@@ -208,6 +208,149 @@ describe LogStash::Codecs::LEEF do
     end
   end
 
+  context "#decode" do
+    let (:message) { "LEEF:1.0|security|threatmanager|1.0|100|src=10.0.0.192 dst=12.121.122.82 spt=1232" }
+
+    def validate(e) 
+      insist { e.is_a?(LogStash::Event) }
+      insist { e['leef_version'] } == "1.0"
+      insist { e['leef_device_version'] } == "1.0"
+      insist { e['leef_eventid'] } == "100"
+    end
+
+    it "should parse the leef headers" do
+      subject.decode(message) do |e|
+        validate(e)
+        ext = e['leef_ext']
+        insist { e["leef_vendor"] } == "security"
+        insist { e["leef_product"] } == "threatmanager"
+      end
+    end
+
+    it "should parse the leef body" do
+      subject.decode(message) do |e|
+        ext = e['leef_ext']
+        insist { ext['src'] } == "10.0.0.192"
+        insist { ext['dst'] } == "12.121.122.82"
+        insist { ext['spt'] } == "1232"
+      end
+    end
+
+    let (:no_ext) { "LEEF:1.0|security|threatmanager|1.0|100|" }
+    it "should be OK with no extension dictionary" do
+      subject.decode(no_ext) do |e|
+        validate(e)
+        insist { e["leef_ext"] } == nil
+      end 
+    end
+
+    let (:missing_headers) { "LEEF:1.0|||1.0|100|src=10.0.0.192 dst=12.121.122.82 spt=1232" }
+    it "should be OK with missing LEEF headers (multiple pipes in sequence)" do
+      subject.decode(missing_headers) do |e|
+        validate(e)
+        insist { e["leef_vendor"] } == ""
+        insist { e["leef_product"] } == ""
+      end 
+    end
+
+    let (:leading_whitespace) { "LEEF:1.0|security|threatmanager|1.0|100| src=10.0.0.192 dst=12.121.122.82 spt=1232" }
+    it "should strip leading whitespace from the message" do
+      subject.decode(leading_whitespace) do |e|
+        validate(e)
+      end 
+    end
+
+    let (:escaped_pipes) { 'LEEF:1.0|security|threatmanager|1.0|100|moo=this\|has an escaped pipe' }
+    it "should be OK with escaped pipes in the message" do
+      subject.decode(escaped_pipes) do |e|
+        ext = e['leef_ext']
+        insist { ext['moo'] } == 'this\|has an escaped pipe'
+      end 
+    end
+
+    let (:pipes_in_message) {'LEEF:1.0|security|threatmanager|1.0|100|moo=this|has an pipe'}
+    it "should be OK with not escaped pipes in the message" do
+      subject.decode(pipes_in_message) do |e|
+        ext = e['leef_ext']
+        insist { ext['moo'] } == 'this|has an pipe'
+      end
+    end
+
+    let (:escaped_equal_in_message) {'LEEF:1.0|security|threatmanager|1.0|100|moo=this \=has escaped \= equals\='}
+    it "should be OK with escaped equal in the message" do
+      subject.decode(escaped_equal_in_message) do |e|
+        ext = e['leef_ext']
+        insist { ext['moo'] } == 'this =has escaped = equals='
+      end
+    end
+
+    let (:escaped_backslash_in_header) {'LEEF:1.0|secu\\\\rity|threat\\\\manager|1.\\\\0|10\\\\0|'}
+    it "should be OK with escaped backslash in the headers" do
+      subject.decode(escaped_backslash_in_header) do |e|
+        insist { e["leef_version"] } == '1.0'
+        insist { e["leef_vendor"] } == 'secu\\rity'
+        insist { e["leef_product"] } == 'threat\\manager'
+        insist { e["leef_device_version"] } == '1.\\0'
+        insist { e["leef_eventid"] } == '10\\0'
+      end
+    end
+
+    let (:escaped_backslash_in_header_edge_case) {'LEEF:1.0|security\\\\\\||threatmanager\\\\|1.0|100|'}
+    it "should be OK with escaped backslash in the headers (edge case: escaped slash in front of pipe)" do
+      subject.decode(escaped_backslash_in_header_edge_case) do |e|
+        validate(e)
+        insist { e["leef_vendor"] } == 'security\\|'
+        insist { e["leef_product"] } == 'threatmanager\\'
+      end
+    end
+
+  #  let (:escaped_pipes_in_header) {'LEEF:1.0|secu\\|rity|threatmanager\\||1.\\|0|10\\|0|'}
+  #  it "should be OK with escaped pipes in the headers" do
+  #    subject.decode(escaped_pipes_in_header) do |e|
+  #      insist { e["leef_version"] } == '0'
+  #      insist { e["leef_vendor"] } == 'secu|rity'
+  #      insist { e["leef_product"] } == 'threatmanager|'
+  #      insist { e["leef_device_version"] } == '1.|0'
+  #      insist { e["leef_eventid"] } == '10|0'
+  #    end
+  #  end
+	
+    let (:escaped_pipes_in_header) {'LEEF:1.0|secu\\|rity|threatmanager\\||1.\\|0|10\\|0|'}
+    it "should be OK with escaped pipes in the headers" do
+      subject.decode(escaped_pipes_in_header) do |e|
+        insist { e["leef_version"] } == '1.0'
+        insist { e["leef_vendor"] } == 'secu|rity'
+        insist { e["leef_product"] } == 'threatmanager|'
+        insist { e["leef_device_version"] } == '1.|0'
+        insist { e["leef_eventid"] } == '10|0'
+      end
+    end
+
+    let (:escaped_backslash_in_message) {'LEEF:1.0|security|threatmanager|1.0|100|moo=this \\\\has escaped \\\\ backslashs\\\\'}
+    it "should be OK with escaped backslashs in the message" do
+      subject.decode(escaped_backslash_in_message) do |e|
+        ext = e['leef_ext']
+        insist { ext['moo'] } == 'this \\has escaped \\ backslashs\\'
+      end
+    end
+
+    let (:equal_in_header) {'LEEF:1.0|security|threatmanager=equal|1.0|100|'}
+    it "should be OK with equal in the headers" do
+      subject.decode(equal_in_header) do |e|
+        validate(e)
+        insist { e["leef_product"] } == "threatmanager=equal"
+      end
+    end
+
+    let (:syslog) { "Syslogdate Sysloghost LEEF:1.0|security|threatmanager|1.0|100|src=10.0.0.192 dst=12.121.122.82 spt=1232" }
+    it "Should detect headers before LEEF starts" do
+      subject.decode(syslog) do |e|
+        validate(e)
+        insist { e['syslog'] } == 'Syslogdate Sysloghost'
+      end 
+    end
+  end
+
   context "encode and decode" do
     subject(:codec) { LogStash::Codecs::LEEF.new }
 
