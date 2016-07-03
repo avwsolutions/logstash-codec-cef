@@ -36,8 +36,6 @@ describe LogStash::Codecs::LEEF do
       codec.product = ""
       codec.version = ""
       codec.eventid = ""
-      #codec.name = ""
-      #codec.severity = ""
       codec.fields = []
       event = LogStash::Event.new("foo" => "bar")
       codec.encode(event)
@@ -50,8 +48,6 @@ describe LogStash::Codecs::LEEF do
       codec.product = "product"
       codec.version = "2.0"
       codec.eventid = "eventid"
-      #codec.name = "name"
-      #codec.severity = "1"
       codec.fields = []
       event = LogStash::Event.new("foo" => "bar")
       codec.encode(event)
@@ -64,49 +60,11 @@ describe LogStash::Codecs::LEEF do
       codec.product = "%{product}"
       codec.version = "%{version}"
       codec.eventid = "%{eventid}"
-      #codec.name = "%{name}"
-      #codec.severity = "%{severity}"
       codec.fields = []
       event = LogStash::Event.new("vendor" => "vendor", "product" => "product", "version" => "2.0", "eventid" => "eventid")
       codec.encode(event)
       expect(results.first).to match(/^LEEF:1.0\|vendor\|product\|2.0\|eventid\|$/m)
     end
-
-    #it "should use default, if severity is not numeric" do
-    #  codec.on_event{|data, newdata| results << newdata}
-    #  codec.severity = "foo"
-    #  codec.fields = []
-    #  event = LogStash::Event.new("foo" => "bar")
-    #  codec.encode(event)
-    #  expect(results.first).to match(/^LEEF:1.0\|Elasticsearch\|Logstash\|1.0\|Logstash\|Logstash\|6\|$/m)
-   # end
-
-    #it "should use default, if severity is > 10" do
-    #  codec.on_event{|data, newdata| results << newdata}
-    #  codec.severity = "11"
-    #  codec.fields = []
-    #  event = LogStash::Event.new("foo" => "bar")
-    #  codec.encode(event)
-    #  expect(results.first).to match(/^LEEF:1.0\|Elasticsearch\|Logstash\|1.0\|Logstash\|Logstash\|6\|$/m)
-   # end
-
-   # it "should use default, if severity is < 0" do
-   #   codec.on_event{|data, newdata| results << newdata}
-   #   codec.severity = "-1"
-   #   codec.fields = []
-   #   event = LogStash::Event.new("foo" => "bar")
-   #   codec.encode(event)
-   #   expect(results.first).to match(/^LEEF:1.0\|Elasticsearch\|Logstash\|1.0\|Logstash\|Logstash\|6\|$/m)
-   # end
-
-    #it "should use default, if severity is float with decimal part" do
-    #  codec.on_event{|data, newdata| results << newdata}
-    #  codec.severity = "5.4"
-    #  codec.fields = []
-    #  event = LogStash::Event.new("foo" => "bar")
-    #  codec.encode(event)
-    #  expect(results.first).to match(/^LEEF:1.0\|Elasticsearch\|Logstash\|1.0\|Logstash\|Logstash\|6\|$/m)
-    #end
 
     it "should append fields as key/value pairs in leef extension part" do
       codec.on_event{|data, newdata| results << newdata}
@@ -130,8 +88,6 @@ describe LogStash::Codecs::LEEF do
       codec.product = "pro|duct"
       codec.version = "ver\\sion"
       codec.eventid = "event\rid"
-      #codec.name = "na\rme"
-      #codec.severity = "4\n"
       codec.fields = []
       event = LogStash::Event.new("foo" => "bar")
       codec.encode(event)
@@ -195,53 +151,6 @@ describe LogStash::Codecs::LEEF do
       expect(results.first).to match(/^LEEF:1.0\|Elastic\|Logstash\|2.3.3\|Logstash\|foo=[0-9TZ.:-]+$/m)
     end
 
-   # it "should use severity (instead of depricated sev), if severity is set)" do
-   #   codec.on_event{|data, newdata| results << newdata}
-      #codec.sev = "4"
-      #codec.severity = "5"
-   #   codec.fields = []
-   #   event = LogStash::Event.new("foo" => "bar")
-   #   codec.encode(event)
-   #   expect(results.first).to match(/^LEEF:1.0\|Elastic\|Logstash\|2.3.3\|Logstash\|$/m)
-   # end
-
-   # it "should use deprecated sev, if severity is not set (equals default value)" do
-   #   codec.on_event{|data, newdata| results << newdata}
-   #   codec.sev = "4"
-   #   codec.fields = []
-   #   event = LogStash::Event.new("foo" => "bar")
-   #   codec.encode(event)
-   #   expect(results.first).to match(/^LEEF:1.0\|Elastic\|Logstash\|2.3.3\|Logstash\|$/m)
-   # end
-
-   # it "should use deprecated sev, if severity is explicitly set to default value)" do
-   #   codec.on_event{|data, newdata| results << newdata}
-   #   codec.sev = "4"
-   #   codec.severity = "6"
-   #   codec.fields = []
-   #   event = LogStash::Event.new("foo" => "bar")
-   #   codec.encode(event)
-   #   expect(results.first).to match(/^LEEF:1.0\|Elastic\|Logstash\|2.3.3\|Logstash\|$/m)
-   # end
-
-   # it "should use deprecated sev, if severity is invalid" do
-   #   codec.on_event{|data, newdata| results << newdata}
-   #   codec.sev = "4"
-   #   codec.severity = ""
-   #   codec.fields = []
-   #   event = LogStash::Event.new("foo" => "bar")
-   #   codec.encode(event)
-   #   expect(results.first).to match(/^LEEF:1.0\|Elasticsearch\|Logstash\|1.0\|Logstash\|Logstash\|4\|$/m)
-   # end
-
-    #it "should use default value, if severity is not set and sev is invalid" do
-    #  codec.on_event{|data, newdata| results << newdata}
-    #  codec.sev = ""
-    #  codec.fields = []
-    #  event = LogStash::Event.new("foo" => "bar")
-    #  codec.encode(event)
-    #  expect(results.first).to match(/^LEEF:1.0\|Elasticsearch\|Logstash\|1.0\|Logstash\|Logstash\|6\|$/m)
-    #end
   end
 
   context "sanitize header field" do
@@ -299,162 +208,6 @@ describe LogStash::Codecs::LEEF do
     end
   end
 
- # context "valid_severity?" do
- #   subject(:codec) { LogStash::Codecs::LEEF.new }
-#
-#    it "should validate severity" do
-#      expect(codec.send(:valid_severity?, nil)).to be == false
-#      expect(codec.send(:valid_severity?, "")).to be == false
-#      expect(codec.send(:valid_severity?, "foo")).to be == false
-#      expect(codec.send(:valid_severity?, "1.5")).to be == false
-#      expect(codec.send(:valid_severity?, "-1")).to be == false
-#      expect(codec.send(:valid_severity?, "11")).to be == false
-#      expect(codec.send(:valid_severity?, "0")).to be == true
-#      expect(codec.send(:valid_severity?, "10")).to be == true
-#      expect(codec.send(:valid_severity?, "1.0")).to be == true
-#      expect(codec.send(:valid_severity?, 1)).to be == true
-#      expect(codec.send(:valid_severity?, 1.0)).to be == true
-#    end
-  end
-
-  context "#decode" do
-    let (:message) { "LEEF:1.0|security|threatmanager|1.0|100|src=10.0.0.192	dst=12.121.122.82	spt=1232" }
-
-    def validate(e) 
-      insist { e.is_a?(LogStash::Event) }
-      insist { e['leef_version'] } == "1.0"
-      insist { e['leef_device_version'] } == "1.0"
-      insist { e['leef_eventid'] } == "100"
-      # insist { e['leef_name'] } == "trojan successfully stopped"
-      # insist { e['leef_severity'] } == "10"
-    end
-
-    it "should parse the leef headers" do
-      subject.decode(message) do |e|
-        validate(e)
-        ext = e['leef_ext']
-        insist { e["leef_vendor"] } == "security"
-        insist { e["leef_product"] } == "threatmanager"
-      end
-    end
-
-    it "should parse the leef body" do
-      subject.decode(message) do |e|
-        ext = e['leef_ext']
-        insist { ext['src'] } == "10.0.0.192"
-        insist { ext['dst'] } == "12.121.122.82"
-        insist { ext['spt'] } == "1232"
-      end
-    end
-
-    let (:no_ext) { "LEEF:1.0|security|threatmanager|1.0|100|" }
-    it "should be OK with no extension dictionary" do
-      subject.decode(no_ext) do |e|
-        validate(e)
-        insist { e["leef_ext"] } == nil
-      end 
-    end
-
-    let (:missing_headers) { "LEEF:1.0|||1.0|100|src=10.0.0.192	dst=12.121.122.82	spt=1232" }
-    it "should be OK with missing LEEF headers (multiple pipes in sequence)" do
-      subject.decode(missing_headers) do |e|
-        validate(e)
-        insist { e["leef_vendor"] } == ""
-        insist { e["leef_product"] } == ""
-      end 
-    end
-
-    let (:leading_whitespace) { "LEEF:1.0|security|threatmanager|1.0|100| src=10.0.0.192	dst=12.121.122.82	spt=1232" }
-    it "should strip leading whitespace from the message" do
-      subject.decode(leading_whitespace) do |e|
-        validate(e)
-      end 
-    end
-
-    let (:escaped_pipes) { 'LEEF:1.0|security|threatmanager|1.0|100|moo=this\|has an escaped pipe' }
-    it "should be OK with escaped pipes in the message" do
-      subject.decode(escaped_pipes) do |e|
-        ext = e['leef_ext']
-        insist { ext['moo'] } == 'this\|has an escaped pipe'
-      end 
-    end
-
-    let (:pipes_in_message) {'LEEF:1.0|security|threatmanager|1.0|100|moo=this|has an pipe'}
-    it "should be OK with not escaped pipes in the message" do
-      subject.decode(pipes_in_message) do |e|
-        ext = e['leef_ext']
-        insist { ext['moo'] } == 'this|has an pipe'
-      end
-    end
-
-    let (:escaped_equal_in_message) {'LEEF:1.0|security|threatmanager|1.0|100|moo=this \=has escaped \= equals\='}
-    it "should be OK with escaped equal in the message" do
-      subject.decode(escaped_equal_in_message) do |e|
-        ext = e['leef_ext']
-        insist { ext['moo'] } == 'this =has escaped = equals='
-      end
-    end
-
-    let (:escaped_backslash_in_header) {'LEEF:1.0|secu\\\\rity|threat\\\\manager|1.\\\\0|10\\\\0|'}
-    it "should be OK with escaped backslash in the headers" do
-      subject.decode(escaped_backslash_in_header) do |e|
-        insist { e["leef_version"] } == '1.0'
-        insist { e["leef_vendor"] } == 'secu\\rity'
-        insist { e["leef_product"] } == 'threat\\manager'
-        insist { e["leef_device_version"] } == '1.\\0'
-        insist { e["leef_eventid"] } == '10\\0'
-        #insist { e["leef_name"] } == 'tro\\jan successfully stopped'
-        #insist { e["leef_severity"] } == '\\10'
-      end
-    end
-
-    let (:escaped_backslash_in_header_edge_case) {'LEEF:1.0|security\\\\\\||threatmanager\\\\|1.0|100|'}
-    it "should be OK with escaped backslash in the headers (edge case: escaped slash in front of pipe)" do
-      subject.decode(escaped_backslash_in_header_edge_case) do |e|
-        validate(e)
-        insist { e["leef_vendor"] } == 'security\\|'
-        insist { e["leef_product"] } == 'threatmanager\\'
-      end
-    end
-
-    let (:escaped_pipes_in_header) {'LEEF:1.0|secu\\|rity|threatmanager\\||1.\\|0|10\\|0|'}
-    it "should be OK with escaped pipes in the headers" do
-      subject.decode(escaped_pipes_in_header) do |e|
-        insist { e["leef_version"] } == '0'
-        insist { e["leef_vendor"] } == 'secu|rity'
-        insist { e["leef_product"] } == 'threatmanager|'
-        insist { e["leef_device_version"] } == '1.|0'
-        insist { e["leef_eventid"] } == '10|0'
-       # insist { e["leef_name"] } == 'tro|jan successfully stopped'
-       # insist { e["leef_severity"] } == '|10'
-      end
-    end
-
-    let (:escaped_backslash_in_message) {'LEEF:1.0|security|threatmanager|1.0|100|moo=this \\\\has escaped \\\\ backslashs\\\\'}
-    it "should be OK with escaped backslashs in the message" do
-      subject.decode(escaped_backslash_in_message) do |e|
-        ext = e['leef_ext']
-        insist { ext['moo'] } == 'this \\has escaped \\ backslashs\\'
-      end
-    end
-
-    let (:equal_in_header) {'LEEF:1.0|security|threatmanager=equal|1.0|100|'}
-    it "should be OK with equal in the headers" do
-      subject.decode(equal_in_header) do |e|
-        validate(e)
-        insist { e["leef_product"] } == "threatmanager=equal"
-      end
-    end
-
-    let (:syslog) { "Syslogdate Sysloghost LEEF:1.0|security|threatmanager|1.0|100|src=10.0.0.192	dst=12.121.122.82	spt=1232" }
-    it "Should detect headers before LEEF starts" do
-      subject.decode(syslog) do |e|
-        validate(e)
-        insist { e['syslog'] } == 'Syslogdate Sysloghost'
-      end 
-    end
-  end
-
   context "encode and decode" do
     subject(:codec) { LogStash::Codecs::LEEF.new }
 
@@ -466,8 +219,6 @@ describe LogStash::Codecs::LEEF do
       codec.product = "%{leef_product}"
       codec.version = "%{leef_device_version}"
       codec.eventid = "%{leef_eventid}"
-     # codec.name = "%{leef_name}"
-    #  codec.severity = "%{leef_severity}"
       codec.fields = [ "foo" ]
       event = LogStash::Event.new("leef_vendor" => "vendor", "leef_product" => "product", "leef_device_version" => "2.0", "leef_eventid" => "eventid", "foo" => "bar")
       codec.encode(event)
@@ -476,9 +227,6 @@ describe LogStash::Codecs::LEEF do
         expect(e['leef_product']).to be == event['leef_product']
         expect(e['leef_device_version']).to be == event['leef_device_version']
         expect(e['leef_eventid']).to be == event['leef_eventid']
-        #expect(e['leef_name']).to be == event['leef_name']
-        #expect(e['leef_severity']).to be == event['leef_severity']
-        # decode saves extensions as hash to 'leef_ext'
         expect(e['leef_ext']['foo']).to be == event['foo']
       end
     end
