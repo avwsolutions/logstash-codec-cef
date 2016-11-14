@@ -1,3 +1,5 @@
+# 3.0.1
+  - Breaking: Updated plugin to use new Java Event APIs for Elastic Stack/Logstash 5.x
 # 1.0.0 (fork from CEF 2.1.3)
   - Slightly changed the format that the codec is available for the IBM Qradar Log Event Extended Format (LEEF)
 # 2.1.3
