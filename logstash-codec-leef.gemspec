@@ -1,7 +1,7 @@
 Gem::Specification.new do |s|
 
   s.name            = 'logstash-codec-leef'
-  s.version         = '3.0.1'
+  s.version         = '4.0'
   s.platform	    = 'java'
   s.licenses        = ['Apache License (2.0)']
   s.summary         = "LEEF codec to parse and encode LEEF formated logs"
