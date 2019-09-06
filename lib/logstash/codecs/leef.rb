@@ -173,7 +173,6 @@ end
     unprocessed_data = data
     HEADER_FIELDS.each do |field_name|
       match_data = HEADER_SCANNER.match(unprocessed_data)
-      @logger.debug(match_data.inspect)
       break if match_data.nil? # missing fields
 
       escaped_field_value = match_data[1]
