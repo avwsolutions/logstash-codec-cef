@@ -137,6 +137,7 @@ end
   def decode(data, &block)
     if @delimiter
       @buffer.extract(data).each do |line|
+        next if /^\s*$/.match(line)  # Skip empty lines
         handle(line, &block)
       end
     else
@@ -146,10 +147,13 @@ end
 
   public
   def handle(data, &block)
+    raise "Empty line" if /^\s*$/.match/data
+
     event = LogStash::Event.new
     event.set(raw_data_field, data) unless raw_data_field.nil?
 
     @utf8_charset.convert(data)
+
 
     # Several of the many operations in the rest of this method will fail when they encounter UTF8-tagged strings
     # that contain invalid byte sequences; fail early to avoid wasted work.
@@ -217,7 +221,7 @@ end
 
   rescue => e
     @logger.error("Failed to decode LEEF payload. Generating failure event with payload in message field.", :error => e.message, :backtrace => e.backtrace, :data => data)
-    yield LogStash::Event.new("message" => data, "tags" => ["_leefparsefailure"])
+    # yield LogStash::Event.new("message" => data, "tags" => ["_leefparsefailure"])
   end
 
   public

@@ -393,6 +393,15 @@ describe LogStash::Codecs::LEEF do
         insist { e.get('spt') } == "1232"
       end
     end
+
+    let (:empty_lines) {["", " ", "   ", "      \r"]}
+    it "should ignore empty lines" do
+      empty_lines.each do |line|
+        subject.decode(line) do |e|
+          expect(e).to be_nil
+        end
+      end
+    end
   end
 
 
