@@ -39,34 +39,15 @@ class LogStash::Codecs::LEEF < LogStash::Codecs::Base
   # to help you build a new value from other parts of the event.
   config :eventid, :validate => :string, :default => "Logstash"
 
-  # Name field in LEEF header. The new value can include `%{foo}` strings
-  # to help you build a new value from other parts of the event.
-  #config :name, :validate => :string, :default => "Logstash"
-
-  # Deprecated severity field for LEEF header. The new value can include `%{foo}` strings
-  # to help you build a new value from other parts of the event.
-  #
-  # This field is used only if :severity is unchanged set to the default value.
-  #
-  # Defined as field of type string to allow sprintf. The value will be validated
-  # to be an integer in the range from 0 to 10 (including).
-  # All invalid values will be mapped to the default of 6.
-  #config :sev, :validate => :string, :default => "6", :deprecated => "This setting is being deprecated, use :severity instead."
-
-  # Severity field in LEEF header. The new value can include `%{foo}` strings
-  # to help you build a new value from other parts of the event.
-  #
-  # Defined as field of type string to allow sprintf. The value will be validated
-  # to be an integer in the range from 0 to 10 (including).
-  # All invalid values will be mapped to the default of 6.
-  #config :severity, :validate => :string, :default => "6"
-
   # Fields to be included in LEEF extension part as key/value pairs
   config :fields, :validate => :array, :default => []
 
   # If raw_data_field is set, during decode of an event an additional field with
   # the provided name is added, which contains the raw data.
   config :raw_data_field, :validate => :string
+
+  # If error_event is true, generate an error event if parsing fails. Payload is placed on :raw_data_field if available
+  config :error_event, :validate => :boolean, :default =>  false
 
 
   # Common Header fields for LEEF. In leefVersion=LEEF:2.0 there is a new optional field leefDelimiter
@@ -150,7 +131,7 @@ end
     raise "Empty line" if /^\s*$/.match/data
 
     event = LogStash::Event.new
-    event.set(raw_data_field, data) unless raw_data_field.nil?
+    event.set(raw_data_field, data) unless @raw_data_field.nil?
 
     @utf8_charset.convert(data)
 
@@ -159,22 +140,22 @@ end
     # that contain invalid byte sequences; fail early to avoid wasted work.
     fail('invalid byte sequence in UTF-8') unless data.valid_encoding?
 
+    # Use a scanning parser to capture the HEADER_FIELDS"""!!!|@@@@@@
+    unprocessed_data = data
+
     # Strip any quotations at the start and end, flex connectors seem to send this
-    if data[0] == "\""
-      data = data[1..-2]
+    if unprocessed_data[0] == "\""
+      unprocessed_data = unprocessed_data[1..-2]
     end
 
-
     # Search for syslog header
-    SYSLOG_HEADER_PATTERN.match(data) do |syslog|
+    SYSLOG_HEADER_PATTERN.match(unprocessed_data) do |syslog|
       event.set('syslogTime', syslog[1])
       event.set('syslogHost', syslog[2])
-      data = syslog.post_match
+      unprocessed_data = syslog.post_match
       @syslogheader = true
     end
 
-    # Use a scanning parser to capture the HEADER_FIELDS"""!!!|@@@@@@
-    unprocessed_data = data
     HEADER_FIELDS.each do |field_name|
       match_data = HEADER_SCANNER.match(unprocessed_data)
       break if match_data.nil? # missing fields
@@ -220,8 +201,13 @@ end
     yield event
 
   rescue => e
-    @logger.error("Failed to decode LEEF payload. Generating failure event with payload in message field.", :error => e.message, :backtrace => e.backtrace, :data => data)
-    # yield LogStash::Event.new("message" => data, "tags" => ["_leefparsefailure"])
+    @logger.error("Failed to decode LEEF payload.", :error => e.message, :backtrace => e.backtrace, :data => data)
+    data_field = if @raw_data_field.nil? then "raw_data" else @raw_data_field end
+    if @error_event
+      @logger.error("Generating error event.", :data => data)
+      yield LogStash::Event.new("message" => e.message, "tags" => ["_leefparsefailure"], data_field => data) if @error_event
+    end
+
   end
 
   public
