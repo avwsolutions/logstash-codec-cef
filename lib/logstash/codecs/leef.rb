@@ -118,7 +118,6 @@ end
   def decode(data, &block)
     if @delimiter
       @buffer.extract(data).each do |line|
-        next if /^\s*$/.match(line)  # Skip empty lines
         handle(line, &block)
       end
     else
@@ -128,7 +127,7 @@ end
 
   public
   def handle(data, &block)
-    raise "Empty line" if /^\s*$/.match/data
+    raise "Empty line" if /^\s*$/.match(data)
 
     event = LogStash::Event.new
     event.set(raw_data_field, data) unless @raw_data_field.nil?
@@ -358,20 +357,5 @@ end
       return "#{sanitize_extension_key(fieldname)}=#{sanitize_extension_val(val)}"
     end
   end
-
-  #def sanitize_severity(event, severity)
-  #  severity = sanitize_header_field(event.sprintf(severity)).strip
-  #  severity = self.class.get_config["severity"][:default] unless valid_severity?(severity)
-  #  severity = severity.to_i.to_s
-  #end
-
-  #def valid_severity?(sev)
-  #  f = Float(sev)
-    # check if it's an integer or a float with no remainder
-    # and if the value is between 0 and 10 (inclusive)
-  #  (f % 1 == 0) && f.between?(0,10)
-  #rescue TypeError, ArgumentError
-  #  false
-  #end
 
 end
