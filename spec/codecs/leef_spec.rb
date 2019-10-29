@@ -11,15 +11,15 @@ describe LogStash::Codecs::LEEF do
   end
 
   context "#encode" do
-    subject(:codec) { LogStash::Codecs::LEEF.new }
-
+    subject(:codec) { LogStash::Codecs::LEEF.new("leefversion" => "1.0", "syslogheader" => false)}
+    
     let(:results)   { [] }
 
     it "should not fail if fields is nil" do
       codec.on_event{|data, newdata| results << newdata}
       event = LogStash::Event.new("foo" => "bar")
       codec.encode(event)
-      expect(results.first).to match(/^LEEF:1.0\|Elastic\|Logstash\|2.3.3\|Logstash\|$/m)
+      expect(results.first).to match(/^LEEF:1.0\|Elastic\|Logstash\|4.0.0\|Logstash\|$/m)
     end
 
     it "should assert all header fields are present" do
@@ -27,11 +27,12 @@ describe LogStash::Codecs::LEEF do
       codec.fields = []
       event = LogStash::Event.new("foo" => "bar")
       codec.encode(event)
-      expect(results.first).to match(/^LEEF:1.0\|Elastic\|Logstash\|2.3.3\|Logstash\|$/m)
+      expect(results.first).to match(/^LEEF:1.0\|Elastic\|Logstash\|4.0.0\|Logstash\|$/m)
     end
 
     it "should use default values for empty header fields" do
       codec.on_event{|data, newdata| results << newdata}
+      codec.leefversion = ""
       codec.vendor = ""
       codec.product = ""
       codec.version = ""
@@ -39,19 +40,21 @@ describe LogStash::Codecs::LEEF do
       codec.fields = []
       event = LogStash::Event.new("foo" => "bar")
       codec.encode(event)
-      expect(results.first).to match(/^LEEF:1.0\|Elastic\|Logstash\|2.3.3\|Logstash\|$/m)
+      expect(results.first).to match(/^LEEF:2.0\|Elastic\|Logstash\|4.0.0\|Logstash\|\t\|$/m)
     end
 
     it "should use configured values for header fields" do
       codec.on_event{|data, newdata| results << newdata}
+      codec.leefversion = "2.0"
+      codec.leefdelimiter = "^"
       codec.vendor = "vendor"
       codec.product = "product"
-      codec.version = "2.0"
+      codec.version = "1.0"
       codec.eventid = "eventid"
       codec.fields = []
       event = LogStash::Event.new("foo" => "bar")
       codec.encode(event)
-      expect(results.first).to match(/^LEEF:1.0\|vendor\|product\|2.0\|eventid\|$/m)
+      expect(results.first).to match(/^LEEF:2.0\|vendor\|product\|1.0\|eventid\|\^\|$/m)
     end
 
     it "should use sprintf for header fields" do
@@ -71,7 +74,7 @@ describe LogStash::Codecs::LEEF do
       codec.fields = [ "foo", "bar" ]
       event = LogStash::Event.new("foo" => "foo value", "bar" => "bar value")
       codec.encode(event)
-      expect(results.first).to match(/^LEEF:1.0\|Elastic\|Logstash\|2.3.3\|Logstash\|foo=foo value	bar=bar value$/m)
+      expect(results.first).to match(/^LEEF:1.0\|Elastic\|Logstash\|4.0.0\|Logstash\|foo=foo value	bar=bar value$/m)
     end
 
     it "should ignore fields in fields if not present in event" do
@@ -79,7 +82,7 @@ describe LogStash::Codecs::LEEF do
       codec.fields = [ "foo", "bar", "baz" ]
       event = LogStash::Event.new("foo" => "foo value", "baz" => "baz value")
       codec.encode(event)
-      expect(results.first).to match(/^LEEF:1.0\|Elastic\|Logstash\|2.3.3\|Logstash\|foo=foo value	baz=baz value$/m)
+      expect(results.first).to match(/^LEEF:1.0\|Elastic\|Logstash\|4.0.0\|Logstash\|foo=foo value	baz=baz value$/m)
     end
 
     it "should sanitize header fields" do
@@ -99,7 +102,7 @@ describe LogStash::Codecs::LEEF do
       codec.fields = [ "f o\no", "@b-a_r" ]
       event = LogStash::Event.new("f o\no" => "foo value", "@b-a_r" => "bar value")
       codec.encode(event)
-      expect(results.first).to match(/^LEEF:1.0\|Elastic\|Logstash\|2.3.3\|Logstash\|foo=foo value	bar=bar value$/m)
+      expect(results.first).to match(/^LEEF:1.0\|Elastic\|Logstash\|4.0.0\|Logstash\|foo=foo value	bar=bar value$/m)
     end
 
     it "should sanitize extension values" do
@@ -107,7 +110,7 @@ describe LogStash::Codecs::LEEF do
       codec.fields = [ "foo", "bar", "baz" ]
       event = LogStash::Event.new("foo" => "foo\\value\n", "bar" => "bar=value\r")
       codec.encode(event)
-      expect(results.first).to match(/^LEEF:1.0\|Elastic\|Logstash\|2.3.3\|Logstash\|foo=foo\\\\value\\n	bar=bar\\=value\\n$/m)
+      expect(results.first).to match(/^LEEF:1.0\|Elastic\|Logstash\|4.0.0\|Logstash\|foo=foo\\\\value\\n	bar=bar\\=value\\n$/m)
     end
 
     it "should encode a hash value" do
@@ -115,7 +118,7 @@ describe LogStash::Codecs::LEEF do
       codec.fields = [ "foo" ]
       event = LogStash::Event.new("foo" => { "bar" => "bar value", "baz" => "baz value" })
       codec.encode(event)
-      foo = results.first[/^LEEF:1.0\|Elastic\|Logstash\|2.3.3\|Logstash\|foo=(.*)$/, 1]
+      foo = results.first[/^LEEF:1.0\|Elastic\|Logstash\|4.0.0\|Logstash\|foo=(.*)$/, 1]
       expect(foo).not_to be_nil
       foo_hash = JSON.parse(foo)
       expect(foo_hash).to eq({"bar" => "bar value", "baz" => "baz value"})
@@ -126,7 +129,7 @@ describe LogStash::Codecs::LEEF do
       codec.fields = [ "foo" ]
       event = LogStash::Event.new("foo" => [ "bar", "baz" ])
       codec.encode(event)
-      foo = results.first[/^LEEF:1.0\|Elastic\|Logstash\|2.3.3\|Logstash\|foo=(.*)$/, 1]
+      foo = results.first[/^LEEF:1.0\|Elastic\|Logstash\|4.0.0\|Logstash\|foo=(.*)$/, 1]
       expect(foo).not_to be_nil
       foo_array = JSON.parse(foo)
       expect(foo_array).to eq(["bar", "baz"])
@@ -137,7 +140,7 @@ describe LogStash::Codecs::LEEF do
       codec.fields = [ "foo" ]
       event = LogStash::Event.new("foo" => [ { "bar" => "bar value" }, "baz" ])
       codec.encode(event)
-      foo = results.first[/^LEEF:1.0\|Elastic\|Logstash\|2.3.3\|Logstash\|foo=(.*)$/, 1]
+      foo = results.first[/^LEEF:1.0\|Elastic\|Logstash\|4.0.0\|Logstash\|foo=(.*)$/, 1]
       expect(foo).not_to be_nil
       foo_array = JSON.parse(foo)
       expect(foo_array).to eq([{"bar" => "bar value"}, "baz"])
@@ -148,7 +151,7 @@ describe LogStash::Codecs::LEEF do
       codec.fields = [ "foo" ]
       event = LogStash::Event.new("foo" => LogStash::Timestamp.new)
       codec.encode(event)
-      expect(results.first).to match(/^LEEF:1.0\|Elastic\|Logstash\|2.3.3\|Logstash\|foo=[0-9TZ.:-]+$/m)
+      expect(results.first).to match(/^LEEF:1.0\|Elastic\|Logstash\|4.0.0\|Logstash\|foo=[0-9TZ.:-]+$/m)
     end
 
   end
@@ -208,129 +211,114 @@ describe LogStash::Codecs::LEEF do
     end
   end
 
-  context "#decode" do
-    let (:message) { "LEEF:1.0|security|threatmanager|1.0|100|src=10.0.0.192 dst=12.121.122.82 spt=1232" }
+  context "#decode v1" do
+    subject(:codec) { LogStash::Codecs::LEEF.new }
+    
+    let(:results)   { [] }
+
+    let (:message) { "LEEF:1.0|security|threatmanager|1.0|100|src=10.0.0.192\tdst=12.121.122.82\tspt=1232" }
 
     def validate(e) 
       insist { e.is_a?(LogStash::Event) }
-      insist { e.get('leef_version') } == "1.0"
-      insist { e.get('leef_device_version') } == "1.0"
-      insist { e.get('leef_eventid') } == "100"
+      insist { e.get('leefVersion') } == "1.0"
     end
 
     it "should parse the leef headers" do
       subject.decode(message) do |e|
-        validate(e)
-        ext = e.get('leef_ext')
-        insist { e.get("leef_vendor") } == "security"
-        insist { e.get("leef_product") } == "threatmanager"
+        insist { e.get('leefVersion') } == "1.0"
+        insist { e.get('deviceVersion') } == "1.0"
+        insist { e.get('deviceEventId') } == "100"
+        insist { e.get("productVendor") } == "security"
+        insist { e.get("deviceProduct") } == "threatmanager"
       end
     end
 
     it "should parse the leef body" do
       subject.decode(message) do |e|
-        ext = e.get('leef_ext')
-        insist { ext['src'] } == "10.0.0.192"
-        insist { ext['dst'] } == "12.121.122.82"
-        insist { ext['spt'] } == "1232"
+        validate(e)
+        insist { e.get('src') } == "10.0.0.192"
+        insist { e.get('dst') } == "12.121.122.82"
+        insist { e.get('spt') } == "1232"
       end
     end
 
-    let (:no_ext) { "LEEF:1.0|security|threatmanager|1.0|100|" }
-    it "should be OK with no extension dictionary" do
-      subject.decode(no_ext) do |e|
-        validate(e)
-        insist { e.get("leef_ext") } == nil
-      end 
-    end
-
-    let (:missing_headers) { "LEEF:1.0|||1.0|100|src=10.0.0.192 dst=12.121.122.82 spt=1232" }
+    let (:missing_headers) { "LEEF:1.0|||1.0|100|src=10.0.0.192\tdst=12.121.122.82\tspt=1232" }
     it "should be OK with missing LEEF headers (multiple pipes in sequence)" do
       subject.decode(missing_headers) do |e|
         validate(e)
-        insist { e.get("leef_vendor") } == ""
-        insist { e.get("leef_product") } == ""
+        insist { e.get("productVendor") } == ""
+        insist { e.get("deviceProduct") } == ""
+        insist { e.get('src') } == "10.0.0.192"
+        insist { e.get('dst') } == "12.121.122.82"
+        insist { e.get('spt') } == "1232"
       end 
     end
 
-    let (:leading_whitespace) { "LEEF:1.0|security|threatmanager|1.0|100| src=10.0.0.192 dst=12.121.122.82 spt=1232" }
+    let (:leading_whitespace) { "LEEF:1.0|security|threatmanager|1.0|100|  src=10.0.0.192\tdst=12.121.122.82\tspt=1232" }
     it "should strip leading whitespace from the message" do
       subject.decode(leading_whitespace) do |e|
         validate(e)
+        insist { e.get('src') } == "10.0.0.192"
+        insist { e.get('dst') } == "12.121.122.82"
+        insist { e.get('spt') } == "1232"
       end 
     end
 
     let (:escaped_pipes) { 'LEEF:1.0|security|threatmanager|1.0|100|moo=this\|has an escaped pipe' }
     it "should be OK with escaped pipes in the message" do
       subject.decode(escaped_pipes) do |e|
-        ext = e.get('leef_ext')
-        insist { ext['moo'] } == 'this\|has an escaped pipe'
+        insist { e.get('moo') } == 'this\|has an escaped pipe'
       end 
     end
 
     let (:pipes_in_message) {'LEEF:1.0|security|threatmanager|1.0|100|moo=this|has an pipe'}
     it "should be OK with not escaped pipes in the message" do
       subject.decode(pipes_in_message) do |e|
-        ext = e.get('leef_ext')
-        insist { ext['moo'] } == 'this|has an pipe'
+        insist { e.get('moo') } == 'this|has an pipe'
       end
     end
 
     let (:escaped_equal_in_message) {'LEEF:1.0|security|threatmanager|1.0|100|moo=this \=has escaped \= equals\='}
     it "should be OK with escaped equal in the message" do
       subject.decode(escaped_equal_in_message) do |e|
-        ext = e.get('leef_ext')
-        insist { ext['moo'] } == 'this =has escaped = equals='
+        insist { e.get('moo') } == 'this =has escaped = equals='
       end
     end
 
     let (:escaped_backslash_in_header) {'LEEF:1.0|secu\\\\rity|threat\\\\manager|1.\\\\0|10\\\\0|'}
     it "should be OK with escaped backslash in the headers" do
       subject.decode(escaped_backslash_in_header) do |e|
-        insist { e.get("leef_version") } == '1.0'
-        insist { e.get("leef_vendor") } == 'secu\\rity'
-        insist { e.get("leef_product") } == 'threat\\manager'
-        insist { e.get("leef_device_version") } == '1.\\0'
-        insist { e.get("leef_eventid") } == '10\\0'
+        insist { e.get("leefVersion") } == '1.0'
+        insist { e.get("productVendor") } == 'secu\\rity'
+        insist { e.get("deviceProduct") } == 'threat\\manager'
+        insist { e.get("deviceVersion") } == '1.\\0'
+        insist { e.get("deviceEventId") } == '10\\0'
       end
     end
 
     let (:escaped_backslash_in_header_edge_case) {'LEEF:1.0|security\\\\\\||threatmanager\\\\|1.0|100|'}
     it "should be OK with escaped backslash in the headers (edge case: escaped slash in front of pipe)" do
       subject.decode(escaped_backslash_in_header_edge_case) do |e|
-        validate(e)
-        insist { e.get("leef_vendor") } == 'security\\|'
-        insist { e.get("leef_product") } == 'threatmanager\\'
+        insist { e.get("productVendor") } == 'security\\|'
+        insist { e.get("deviceProduct") } == 'threatmanager\\'
       end
     end
-
-  #  let (:escaped_pipes_in_header) {'LEEF:1.0|secu\\|rity|threatmanager\\||1.\\|0|10\\|0|'}
-  #  it "should be OK with escaped pipes in the headers" do
-  #    subject.decode(escaped_pipes_in_header) do |e|
-  #      insist { e.get("leef_version") } == '0'
-  #      insist { e.get("leef_vendor") } == 'secu|rity'
-  #      insist { e.get("leef_product") } == 'threatmanager|'
-  #      insist { e.get("leef_device_version") } == '1.|0'
-  #      insist { e.get("leef_eventid") } == '10|0'
-  #    end
-  #  end
 	
     let (:escaped_pipes_in_header) {'LEEF:1.0|secu\\|rity|threatmanager\\||1.\\|0|10\\|0|'}
     it "should be OK with escaped pipes in the headers" do
       subject.decode(escaped_pipes_in_header) do |e|
-        insist { e.get("leef_version") } == '1.0'
-        insist { e.get("leef_vendor") } == 'secu|rity'
-        insist { e.get("leef_product") } == 'threatmanager|'
-        insist { e.get("leef_device_version") } == '1.|0'
-        insist { e.get("leef_eventid") } == '10|0'
+        insist { e.get("leefVersion") } == '1.0'
+        insist { e.get("productVendor") } == 'secu|rity'
+        insist { e.get("deviceProduct") } == 'threatmanager|'
+        insist { e.get("deviceVersion") } == '1.|0'
+        insist { e.get("deviceEventId") } == '10|0'
       end
     end
 
     let (:escaped_backslash_in_message) {'LEEF:1.0|security|threatmanager|1.0|100|moo=this \\\\has escaped \\\\ backslashs\\\\'}
     it "should be OK with escaped backslashs in the message" do
       subject.decode(escaped_backslash_in_message) do |e|
-        ext = e.get('leef_ext')
-        insist { ext['moo'] } == 'this \\has escaped \\ backslashs\\'
+        insist { e.get('moo') } == 'this \\has escaped \\ backslashs\\'
       end
     end
 
@@ -338,16 +326,95 @@ describe LogStash::Codecs::LEEF do
     it "should be OK with equal in the headers" do
       subject.decode(equal_in_header) do |e|
         validate(e)
-        insist { e.get("leef_product") } == "threatmanager=equal"
+        insist { e.get("deviceProduct") } == "threatmanager=equal"
       end
     end
 
-    let (:syslog) { "Syslogdate Sysloghost LEEF:1.0|security|threatmanager|1.0|100|src=10.0.0.192 dst=12.121.122.82 spt=1232" }
+    let (:syslog) { "Aug  1 12:00:00 sysloghost LEEF:1.0|security|threatmanager|1.0|100|src=10.0.0.192\tdst=12.121.122.82\tspt=1232" }
     it "Should detect headers before LEEF starts" do
       subject.decode(syslog) do |e|
         validate(e)
-        insist { e.get('syslog') } == 'Syslogdate Sysloghost'
+        insist { e.get('syslogTime') } == 'Aug  1 12:00:00'
+        insist { e.get('syslogHost') } == 'sysloghost'
+        insist { e.get('src') } == "10.0.0.192"
+        insist { e.get('dst') } == "12.121.122.82"
+        insist { e.get('spt') } == "1232"
       end 
+    end
+  end
+
+  context "#decode v2" do
+    subject(:codec) { LogStash::Codecs::LEEF.new }
+
+    let (:message) { "LEEF:2.0|security|threatmanager|1.0|100|^|src=10.0.0.192^dst=12.121.122.82^spt=1232" }
+
+    def validate(e) 
+      insist { e.is_a?(LogStash::Event) }
+      insist { e.get('leefVersion') } == "2.0"
+    end
+
+    it "should parse the leef headers" do
+      subject.decode(message) do |e|
+        insist { e.get('deviceVersion') } == "1.0"
+        insist { e.get('deviceEventId') } == "100"
+        insist { e.get("productVendor") } == "security"
+        insist { e.get("deviceProduct") } == "threatmanager"
+        insist { e.get("leefDelimiter") } == "^"
+      end
+    end
+
+    it "should parse the leef body" do
+      subject.decode(message) do |e|
+        validate(e)
+        insist { e.get('src') } == "10.0.0.192"
+        insist { e.get('dst') } == "12.121.122.82"
+        insist { e.get('spt') } == "1232"
+      end
+    end
+
+    let (:default_delimiter) {"LEEF:2.0|security|threatmanager|1.0|100|src=10.0.0.192\tdst=12.121.122.82\tspt=1232"}
+    it "should use default delimiter" do
+      subject.decode(default_delimiter) do |e|
+        validate(e)
+        expect(codec.send(:get_leefdelimiter_value, "\t")).to be == "\t"
+        insist { e.get('src') } == "10.0.0.192"
+        insist { e.get('dst') } == "12.121.122.82"
+        insist { e.get('spt') } == "1232"
+      end
+    end
+
+    let (:utf8_delimiter) {'LEEF:2.0|security|threatmanager|1.0|100|0x241d|src=10.0.0.192␝dst=12.121.122.82␝spt=1232'}
+    it "should use default delimiter" do
+      subject.decode(utf8_delimiter) do |e|
+        validate(e)
+        insist { e.get("leefDelimiter") } == "0x241d"
+        insist { e.get('src') } == "10.0.0.192"
+        insist { e.get('dst') } == "12.121.122.82"
+        insist { e.get('spt') } == "1232"
+      end
+    end
+
+    let (:empty_lines) {["", " ", "   ", "      \r"]}
+    it "should ignore empty lines" do
+      empty_lines.each do |line|
+        subject.decode(line) do |e|
+          expect(e).to be_nil
+        end
+      end
+    end
+  end
+
+
+  context "get v2 delmiter value" do
+    subject(:codec) { LogStash::Codecs::LEEF.new }
+
+    it "should get delimiter value" do
+
+      expect(codec.send(:get_leefdelimiter_value, "\t")).to be == "\t"
+      expect(codec.send(:get_leefdelimiter_value, "\x21")).to be == "!"
+      expect(codec.send(:get_leefdelimiter_value, "x21")).to be == "!"
+      expect(codec.send(:get_leefdelimiter_value, "0x21")).to be == "!"
+      expect(codec.send(:get_leefdelimiter_value, "0x241d")).to be == "␝"
     end
   end
 
@@ -358,19 +425,34 @@ describe LogStash::Codecs::LEEF do
 
     it "should return an equal event if encoded and decoded again" do
       codec.on_event{|data, newdata| results << newdata}
-      codec.vendor = "%{leef_vendor}"
-      codec.product = "%{leef_product}"
-      codec.version = "%{leef_device_version}"
-      codec.eventid = "%{leef_eventid}"
+      codec.syslogheader = false
+      codec.leefversion = "%{leefVersion}"
+      codec.leefdelimiter = "%{leefDelimiter}"
+      codec.vendor = "%{productVendor}"
+      codec.product = "%{deviceProduct}"
+      codec.version = "%{deviceVersion}"
+      codec.eventid = "%{deviceEventId}"
       codec.fields = [ "foo" ]
-      event = LogStash::Event.new("leef_vendor" => "vendor", "leef_product" => "product", "leef_device_version" => "2.0", "leef_eventid" => "eventid", "foo" => "bar")
+
+      event = LogStash::Event.new(
+        "leefVersion" => "2.0",
+        "leefDelimiter" => "^",
+        "productVendor" => "vendor",
+        "deviceProduct" => "product",
+        "deviceVersion" => "2.0",
+        "deviceEventId" => "eventid",
+        "foo" => "bar"
+      )
+
       codec.encode(event)
       codec.decode(results.first) do |e|
-        expect(e.get('leef_vendor')).to be == event.get('leef_vendor')
-        expect(e.get('leef_product')).to be == event.get('leef_product')
-        expect(e.get('leef_device_version')).to be == event.get('leef_device_version')
-        expect(e.get('leef_eventid')).to be == event.get('leef_eventid')
-        expect(e.get('[leef_ext][foo]')).to be == event.get('foo')
+        expect(e.get('leefVersion')).to be == event.get('leefVersion')
+        expect(e.get('leefDelimiter')).to be == event.get('leefDelimiter')
+        expect(e.get('productVendor')).to be == event.get('productVendor')
+        expect(e.get('deviceProduct')).to be == event.get('deviceProduct')
+        expect(e.get('deviceVersion')).to be == event.get('deviceVersion')
+        expect(e.get('deviceEventId')).to be == event.get('deviceEventId')
+        expect(e.get('foo')).to be == event.get('foo')
       end
     end
   end
